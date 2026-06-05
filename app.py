@@ -12,7 +12,6 @@ CORS(app)
 
 # CONFIGURAÇÃO FIREBASE
 service_account_path = '/etc/secrets/firebase-key.json'
-MAX_REGISTROS = 20
 
 if os.path.exists(service_account_path):
     try:
@@ -28,7 +27,7 @@ if os.path.exists(service_account_path):
 
 # Gemini
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-3.1-flash-lite')
 
 @app.route('/')
 def index(): 
