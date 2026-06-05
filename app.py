@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import google.generativeai as genai
@@ -7,11 +8,10 @@ import firebase_admin
 from firebase_admin import credentials, firestore, db
 
 app = Flask(__name__, template_folder='templates')
-CORS(app) # Importante para o Firebase Hosting conseguir falar com o Render
+CORS(app)
 
 # --- CONFIGURAÇÃO FIREBASE ---
 service_account_path = '/etc/secrets/firebase-key.json'
-MAX_REGISTROS = 20
 
 if os.path.exists(service_account_path):
     try:
@@ -21,53 +21,54 @@ if os.path.exists(service_account_path):
         })
         fs = firestore.client()
         rtdb = db.reference()
-        print("✅ Firebase conectado com sucesso!")
+        print("✅ Firebase Conectado!")
     except Exception as e:
-        print(f"❌ Erro ao iniciar Firebase: {e}")
-else:
-    print("⚠️ Arquivo /etc/secrets/firebase-key.json não encontrado!")
+        print(f"❌ Erro Firebase: {e}")
 
-# Configuração Gemini
+# Gemini
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 @app.route('/')
-def index(): return "Servidor IA Ativo", 200
+def index(): return "IA Motor Ativo", 200
 
-@app.route('/buscar', methods=['POST', 'OPTIONS'])
+@app.route('/ping')
+def ping(): return "PONG", 200
+
+@app.route('/buscar', methods=['POST'])
 def buscar():
-    if request.method == 'OPTIONS': return '', 204
-    
     data = request.json
-    tema = data.get('tema')
+    tema = data.get('tema', 'nature')
     uid = data.get('uid')
     
-    print(f"🔎 Buscando tema: {tema} para o UID: {uid}")
-
+    # Tradução com Gemini
     try:
-        response = model.generate_content(f"Translate '{tema}' to 1 english noun.")
+        response = model.generate_content(f"Translate '{tema}' to 1 english noun. Only the word.")
         keyword = response.text.strip().split()[0].replace('.', '').replace('"', '')
     except:
         keyword = "nature"
     
-    image_url = f"https://loremflickr.com/1280/720/{keyword}"
+    # Busca Pexels
+    headers = {"Authorization": os.environ.get("PEXELS_API_KEY")}
+    try:
+        pex_r = requests.get(f"https://api.pexels.com/v1/search?query={keyword}&per_page=1", headers=headers)
+        image_url = pex_r.json()['photos'][0]['src']['large']
+    except:
+        image_url = f"https://loremflickr.com/1280/720/{keyword}"
 
-    # GRAVAÇÃO NOS BANCOS DE DADOS
+    # Salvar Firebase
     if uid and firebase_admin._apps:
         try:
-            # 1. Firestore
             fs.collection('usuarios').document(uid).collection('imagens').add({
                 'url': image_url, 'tema': tema, 'timestamp': firestore.SERVER_TIMESTAMP
             })
-            # 2. Realtime
             rtdb.child('historico').child(uid).push({
                 'pesquisa': tema, 'timestamp': {".sv": "timestamp"}
             })
-            print("💾 Dados salvos no Firebase!")
-        except Exception as e:
-            print(f"❌ Erro ao salvar no Firebase: {e}")
+        except: pass
 
     return jsonify({'image_url': image_url, 'tema': tema})
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
