@@ -1,0 +1,2 @@
+python baixar_imagens.py
+

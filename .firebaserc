@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "cerebro-fba58"
+  },
+  "targets": {
+    "cerebro-fba58": {
+      "hosting": {
+        "main": [
+          "cerebro-fba58-2f996"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
