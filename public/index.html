@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IA Photo Search Pro</title>
+    <!-- Bibliotecas Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -16,7 +17,8 @@
         button { padding: 12px 25px; background: #00ff00; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: black; width: 90%; margin-bottom: 10px; }
         img { max-width: 100%; border-radius: 10px; margin-top: 20px; border: 2px solid #00ff00; }
         .history-item { background: #252525; padding: 10px; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #00ff00; font-size: 0.9em; }
-        .btn-del { background: #ff4444; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+        /* Botão de apagar pequeno e circular */
+        .btn-del { background: #ff4444; color: white; border: none; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; cursor: pointer; flex-shrink: 0; padding: 0; }
         .hidden { display: none; }
     </style>
 </head>
@@ -30,7 +32,6 @@
             <input type="text" id="tema" placeholder="O que deseja buscar?">
             <button onclick="buscarImagem()">Buscar com Gemini + Pexels</button>
             <button onclick="logout()" style="background:#333; color: white;">Sair</button>
-            
             <div id="resultado"></div>
             <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
             <h3>🕰️ Histórico (Firestore + Realtime)</h3>
@@ -40,13 +41,13 @@
 
     <script>
         const firebaseConfig = {
-          apiKey: "AIzaSyBmLnRA5XFZGPL0Y4Cjn4Fk3_FohlNCb1Q",
-          authDomain: "cerebro-fba58.firebaseapp.com",
-          databaseURL: "https://cerebro-fba58-default-rtdb.firebaseio.com",
-          projectId: "cerebro-fba58",
-          storageBucket: "cerebro-fba58.firebasestorage.app",
-          messagingSenderId: "351768167722",
-          appId: "1:351768167722:web:64a7c00acc2f90334d0a53"
+            apiKey: "AIzaSyBmLnRA5XFZGPL0Y4Cjn4Fk3_FohlNCb1Q",
+            authDomain: "cerebro-fba58.firebaseapp.com",
+            databaseURL: "https://cerebro-fba58-default-rtdb.firebaseio.com",
+            projectId: "cerebro-fba58",
+            storageBucket: "cerebro-fba58.firebasestorage.app",
+            messagingSenderId: "351768167722",
+            appId: "1:351768167722:web:64a7c00acc2f90334d0a53"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -58,7 +59,7 @@
 
         auth.onAuthStateChanged(user => {
             if (user) {
-                globalUid = user.uid; // SALVA O UID GLOBALMENTE
+                globalUid = user.uid;
                 document.getElementById('btn-login').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
                 document.getElementById('user-info').innerText = `Olá, ${user.displayName}`;
@@ -68,16 +69,11 @@
 
         async function buscarImagem() {
             const tema = document.getElementById('tema').value;
-            if(!tema || !globalUid) {
-                alert("Faça login primeiro!");
-                return;
-            }
+            if(!tema || !globalUid) return;
             const resDiv = document.getElementById('resultado');
             resDiv.innerHTML = "⏳ Processando...";
-
             try {
-                // ENVIA O UID PARA O RENDER
-                const response = await fetch('https://baixar-imagem.onrender.com/buscar', {
+                const response = await fetch('https://imagens-ia.onrender.com/buscar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tema: tema, uid: globalUid })
@@ -106,6 +102,14 @@
         function remover(id) {
             db.ref('historico/' + globalUid + '/' + id).remove();
         }
+
+        // Lógica da tecla Voltar para limpar a tela
+        history.pushState(null, null, location.href);
+        window.onpopstate = function () {
+            history.go(1);
+            document.getElementById("resultado").innerHTML = "";
+            document.getElementById("tema").value = "";
+        };
 
         function logout() { auth.signOut(); location.reload(); }
     </script>
